@@ -19,7 +19,7 @@ function main() {
     var CpmAmount = 1;
 
     // Spreadsheet init
-    var spreadsheet_url = '';
+    var spreadsheet_url = 'https://docs.google.com/spreadsheets/d/15bwYT_klS0-v83CZG0aoMhH2fXl7EEXyKTrt4fzw3ZE/edit?usp=sharing';
     var spreadsheet = SpreadsheetApp.openByUrl(spreadsheet_url);
     var sheet = spreadsheet.getSheets()[0];
 
@@ -40,7 +40,6 @@ function main() {
     while(campaignIterator.hasNext()) {
         var campaign = campaignIterator.next();
         Logger.log("Campaign: " + campaign.getName());
-
         var currentBiddingStrategy = campaign.getBiddingStrategyType();
         Logger.log("current bidding strategy: " + currentBiddingStrategy);
 
@@ -48,7 +47,9 @@ function main() {
         var currentCost = currentStats.getCost();
         var currentClicks = currentStats.getClicks();
         var currentCpm = currentStats.getAverageCpm();
+        Logger.log("Current Cpm: " + currentCpm);
         var currentCtr = currentStats.getCtr();
+        Logger.log("CurrentCtr: " + currentCtr);
         var currentCpc = currentStats.getCpc();
     }
     // Select ad group to adjust cpm
@@ -67,8 +68,12 @@ function main() {
     }
 
     // Conditional check - If CTR is > .10% raise CPM to CPMamount
-    if(currentCtr > CtrCheck) {
+    else if(currentCtr > CtrCheck) {
         Logger.log("CTR not in a good spot - adjusting...");
         adGroup.setCpm(CpmAmount);
+    }
+
+    else {
+        Logger.log("Error in script");
     }
 }
