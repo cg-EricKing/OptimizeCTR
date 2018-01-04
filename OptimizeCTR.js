@@ -51,6 +51,10 @@ function main() {
         var currentCtr = currentStats.getCtr();
         Logger.log("CurrentCtr: " + currentCtr);
         var currentCpc = currentStats.getCpc();
+        
+        var statsArray = [[currentCost, currentClicks, currentCpm, currentCtr, currentCpc]];
+        var statsRange = sheet.getRange('B5:F5');
+        statsRange.setValues(statsArray);
     }
     // Select ad group to adjust cpm
     var adGroupSelector = AdWordApp
