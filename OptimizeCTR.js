@@ -6,78 +6,87 @@
 // Set init variables (CTRCheck: .10%, CPMamount: $1)
 // Select current campaign
 // Grab stats from the campaign (CTR, CPM)
-// Conditional check - If CTR is > .10% raise CPM to CPMamount
-// Conditional check - If CPM >$1 = ignore
+// Conditional check - If Average CPM is over Max CPM - set Max CPM to $1.00
 
-function main() {
-    // Select account
-    var currentAccount = AdWordApp.currentAccount();
-    var accountName = currentAccount.getName();
+// Report to generate stats on placements
+// Calculate formula to generate a % to add to specific placements that require a bid adjustment
 
-    // Init Variables
-    var CtrCheck = .00010;
-    var CpmAmount = 1;
 
-    // Spreadsheet init
-    var spreadsheet_url = 'https://docs.google.com/spreadsheets/d/15bwYT_klS0-v83CZG0aoMhH2fXl7EEXyKTrt4fzw3ZE/edit?usp=sharing';
-    var spreadsheet = SpreadsheetApp.openByUrl(spreadsheet_url);
-    var sheet = spreadsheet.getSheets()[0];
-
-    // Grab SS Data
-    var emailForNotify = sheet.getRange();
-
-    // Email function to pass string and send through to email provided
-    function notify(string) {
-        MailApp.sendEmail(emailForNotify, accountName, string);
-    }
-
-    // Select campaign - Grab stats in loop
-    var campaignSelector = AdWordsApp
-        .campaigns()
-        .withCondition("Status = ENABLED");
+    function main() {
+        // Select account
+        var currentAccount = AdWordsApp.currentAccount();
+        var accountName = currentAccount.getName();
     
-    var campaignIterator = campaignSelector.get();
-    while(campaignIterator.hasNext()) {
-        var campaign = campaignIterator.next();
-        Logger.log("Campaign: " + campaign.getName());
-        var currentBiddingStrategy = campaign.getBiddingStrategyType();
-        Logger.log("current bidding strategy: " + currentBiddingStrategy);
-
-        var currentStats = campaign.getStatsFor("LAST_7_DAYS");
-        var currentCost = currentStats.getCost();
-        var currentClicks = currentStats.getClicks();
-        var currentCpm = currentStats.getAverageCpm();
-        Logger.log("Current Cpm: " + currentCpm);
-        var currentCtr = currentStats.getCtr();
-        Logger.log("CurrentCtr: " + currentCtr);
-        var currentCpc = currentStats.getCpc();
+        // Init Variables
+        var CtrCheck = parseFloat(.001);
+        var cpmAmount = parseFloat(1);
+        var maxCpm = parseFloat(1.25);
         
-        var statsArray = [[currentCost, currentClicks, currentCpm, currentCtr, currentCpc]];
-        var statsRange = sheet.getRange('B5:F5');
-        statsRange.setValues(statsArray);
-    }
-    // Select ad group to adjust cpm
-    var adGroupSelector = AdWordApp
-        .adGroups();
-
-    var adGroupIterator = adGroupSelector.get();
-    while(adGroupIterator.hasNext()) {
-        var adGroup = adGroupIterator.next();
-    }
     
-
-    // Conditional check - If CPM >$1 = ignore
-    if(currentCpm > CpmAmount) {
-        Logger.log("Campaign CTR in a good place");
+        // Spreadsheet init
+        var spreadsheet_url = 'https://docs.google.com/spreadsheets/d/15bwYT_klS0-v83CZG0aoMhH2fXl7EEXyKTrt4fzw3ZE/edit?usp=sharing';
+        var spreadsheet = SpreadsheetApp.openByUrl(spreadsheet_url);
+        var sheet = spreadsheet.getSheets()[0];
+    
+        // Grab SS Data
+        var emailForNotify = 'eric.king@comporium.com';
+    
+        // Email function to pass string and send through to email provided
+        function notify(string) {
+            MailApp.sendEmail(emailForNotify, accountName, string);
+        }
+    
+        // Select campaign - Check bidding strategy type
+        var campaignSelector = AdWordsApp
+            .campaigns()
+            .withCondition("Status = ENABLED");
+        
+        var campaignIterator = campaignSelector.get();
+        while(campaignIterator.hasNext()) {
+            var campaign = campaignIterator.next();
+            Logger.log("Campaign: " + campaign.getName());
+            var currentBiddingStrategy = campaign.getBiddingStrategyType();
+            Logger.log("current bidding strategy: " + currentBiddingStrategy);
+        }
+        // Select Placements to adjust cpm
+        var placementSelector = AdWordsApp.display()
+            .placements()
+            .withCondition("Status = ENABLED")
+            .withCondition("Impressions > 1")
+            .forDateRange("LAST_7_DAYS");
+    
+    
+        var placementIterator = placementSelector.get();
+        while (placementIterator.hasNext()) {
+            var placement = placementIterator.next();
+            var placementStats = placement.getStatsFor("LAST_7_DAYS");
+            var placementAverageCpm = placementStats.getAverageCpm();
+            var placementCtr = placementStats.getCtr();
+            var placementImpressions = placementStats.getImpressions();
+            var placementClicks = placementStats.getClicks();
+            var placementCost = placementStats.getCost();
+            Logger.log("================================");
+            Logger.log("Placements Ctr: " + placementCtr);
+            var placementCpm = placement.bidding().getCpm();
+            Logger.log("Placements Cpm: " + placementCpm);
+            Logger.log("Placement Average Cpm:" + placementAverageCpm);
+            Logger.log("Placement Impressions: " + placementImpressions);
+            Logger.log("Placement Clicks: " + placementClicks);
+            Logger.log("Placement Cost: " + placementCost);
+              Logger.log("================================");
+            var twentyPer = parseFloat(1.20);
+            var cpmAdjust = placementCpm * twentyPer;
+          
+                  // Conditional check - If CTR is > .10% raise CPM to CPMamount
+            if (placementAverageCpm > maxCpm) {
+               placement.bidding().setCpm(cpmAmount);
+            }	
+            else {
+              // Cpm is below $1.25
+              Logger.log("Ignore");
+            }  
+        }
+    
+    
+         
     }
-
-    // Conditional check - If CTR is > .10% raise CPM to CPMamount
-    else if(currentCtr > CtrCheck) {
-        Logger.log("CTR not in a good spot - adjusting...");
-        adGroup.setCpm(CpmAmount);
-    }
-
-    else {
-        Logger.log("Error in script");
-    }
-}
